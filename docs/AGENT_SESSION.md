@@ -31,9 +31,7 @@
   - `tests/action_validator.test.ts`
   - `tests/evaluator.test.ts`
   - `tests/report_writer.test.ts`
-  - `tests/mistral_adapter.test.ts`
   - `tests/e2e_run.test.ts`
-- Verified live execution against Mistral API (`ministral-8b-latest`) with verified clean PASS.
 
 ### Phase 4: UI Dashboard, Documentation Site, and Media Recording
 - Implemented responsive glassmorphism dark-mode Web Dashboard at `http://localhost:4000/`.
