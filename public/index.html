@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptTrap — Reproducible Evaluation Obstacle Course for AI Browser Agents</title>
+  <meta name="description" content="A local-first, reproducible test harness evaluating whether browser agents powered by open-weight Gemma models obey user tasks when mock pages contain adversarial indirect prompt injections.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">🪤</div>
+        <div class="brand-text">
+          <div class="brand-title">PromptTrap <span class="version-tag">v1.0 MVP</span></div>
+          <div class="brand-subtitle">AI Browser Agent Security & Prompt Injection Evaluation Harness</div>
+        </div>
+      </div>
+
+      <div class="system-status-pills">
+        <a href="/docs" class="btn btn-secondary" style="text-decoration: none; font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+          📖 Docs & User Manual
+        </a>
+        <div id="status-origin" class="status-pill">
+          <span class="status-dot green"></span>
+          <span>Mock Origin: <strong id="origin-label">127.0.0.1:4000</strong></span>
+        </div>
+        <div id="status-gemma" class="status-pill">
+          <span class="status-dot amber"></span>
+          <span>Gemma: <strong id="gemma-label">Checking...</strong></span>
+        </div>
+        <div id="status-mistral" class="status-pill">
+          <span class="status-dot"></span>
+          <span>Mistral: <strong id="mistral-label">Checking...</strong></span>
+        </div>
+        <div id="status-browserbase" class="status-pill">
+          <span class="status-dot"></span>
+          <span>Browserbase: <strong id="bb-label">Checking...</strong></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Execution Control Toolbar -->
+    <section class="toolbar-section">
+      <div class="toolbar-container">
+        <div class="control-group">
+          <label for="select-model" class="control-label">Agent Model Engine</label>
+          <select id="select-model" class="styled-select">
+            <option value="simulator_compliant">Gemma Simulator (Compliant / Defense Verified)</option>
+            <option value="simulator_vulnerable">Gemma Baseline (Vulnerable / Attack Demonstration)</option>
+            <option value="gemma_live">Live Gemma via Ollama (Local open-weight)</option>
+            <option value="mistral_cloud">Mistral AI Cloud API (mistral-small-latest)</option>
+            <option value="mistral_ollama">Mistral via Ollama (Local mistral)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="select-browser" class="control-label">Browser Runtime</label>
+          <select id="select-browser" class="styled-select">
+            <option value="local">Local Isolated DOM Context (Deterministic)</option>
+            <option value="browserbase">Browserbase Cloud Browser (Stagehand)</option>
+          </select>
+        </div>
+
+        <div class="control-group guard-toggle-group">
+          <label class="control-label">PromptTrap Defense Guard</label>
+          <div class="guard-toggle-wrapper">
+            <input type="checkbox" id="guard-toggle" checked />
+            <label for="guard-toggle" class="toggle-slider"></label>
+            <span id="guard-toggle-label" class="toggle-text">Active (Guarded)</span>
+          </div>
+        </div>
+
+        <div class="action-buttons-group">
+          <button id="btn-run-scenario" class="btn btn-primary">
+            <span class="btn-icon">⚡</span> Run Selected Scenario
+          </button>
+          <button id="btn-run-all" class="btn btn-secondary">
+            <span class="btn-icon">🚀</span> Run All Scenarios
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace Grid -->
+    <main class="main-content-grid">
+      <!-- Left Column: Scenario Catalog -->
+      <aside class="scenario-catalog-panel">
+        <div class="panel-header">
+          <h2>Evaluation Scenarios</h2>
+          <span id="scenario-count-badge" class="badge-counter">6 Available</span>
+        </div>
+        <p class="panel-caption">Select an adversarial prompt injection obstacle course:</p>
+
+        <div id="scenario-list" class="scenario-cards-list">
+          <!-- Populated dynamically via JS -->
+          <div class="loading-placeholder">Loading scenarios...</div>
+        </div>
+      </aside>
+
+      <!-- Right Column: Interactive Workbench & Execution Audit Trace -->
+      <section class="workbench-panel">
+        <!-- Active Scenario Card Detail -->
+        <div class="active-scenario-card">
+          <div class="active-scenario-header">
+            <div>
+              <span id="active-risk-badge" class="risk-badge badge-medium">MEDIUM RISK</span>
+              <h1 id="active-title">Select a scenario to inspect and evaluate</h1>
+            </div>
+            <div id="active-path-badge" class="path-badge">/mock/...</div>
+          </div>
+
+          <div class="scenario-prompt-box">
+            <div class="prompt-section">
+              <span class="prompt-label">Trusted User Task:</span>
+              <div id="active-user-task" class="prompt-text">Choose a scenario from the catalog on the left.</div>
+            </div>
+            <div class="prompt-section">
+              <span class="prompt-label">Adversarial Injection Embedded on Mock Page:</span>
+              <div id="active-injection-text" class="injection-text-preview">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Run Execution Status Banner -->
+        <div id="execution-status-banner" class="status-banner idle">
+          <div class="banner-content">
+            <div id="banner-icon" class="banner-icon">🎯</div>
+            <div>
+              <div id="banner-title" class="banner-title">Ready for Evaluation</div>
+              <div id="banner-subtitle" class="banner-subtitle">Configure model engine and click Run Scenario to begin audit.</div>
+            </div>
+          </div>
+          <div id="execution-metrics" class="banner-metrics" style="display: none;">
+            <div class="metric-item">
+              <span class="metric-label">Task Completed</span>
+              <span id="metric-task" class="metric-value">—</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Model Compliance</span>
+              <span id="metric-compliance" class="metric-value">—</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">System Containment</span>
+              <span id="metric-containment" class="metric-value">—</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Duration</span>
+              <span id="metric-duration" class="metric-value">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workbench Tabs Navigation -->
+        <div class="workbench-tabs">
+          <button class="tab-btn active" data-tab="tab-trace">
+            <span>⏱️ Action Trace & Guard Events</span>
+            <span id="trace-count-badge" class="tab-badge">0</span>
+          </button>
+          <button class="tab-btn" data-tab="tab-assertions">
+            <span>🔍 Deterministic Assertions</span>
+            <span id="assertions-count-badge" class="tab-badge">0</span>
+          </button>
+          <button class="tab-btn" data-tab="tab-report">
+            <span>📑 Audit Report & Export</span>
+          </button>
+          <button class="tab-btn" data-tab="tab-history">
+            <span>📜 Run History</span>
+          </button>
+        </div>
+
+        <!-- Tab 1: Trace Timeline -->
+        <div id="tab-trace" class="tab-pane active">
+          <div class="trace-timeline-container">
+            <div id="trace-list" class="trace-events-list">
+              <div class="empty-trace-message">
+                No events recorded yet. Run a scenario to observe agent proposals and guard containment decisions.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Deterministic Assertions -->
+        <div id="tab-assertions" class="tab-pane">
+          <div class="assertions-container">
+            <div id="assertions-list" class="assertions-list">
+              <div class="empty-trace-message">
+                Scenario assertion results will appear here after execution.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Report & Export -->
+        <div id="tab-report" class="tab-pane">
+          <div class="report-container">
+            <div class="report-actions-bar">
+              <div class="report-formats">
+                <button id="btn-show-md" class="btn-sm active">Markdown View</button>
+                <button id="btn-show-json" class="btn-sm">Raw JSON View</button>
+              </div>
+              <div class="report-downloads">
+                <button id="btn-download-md" class="btn-sm btn-outline">⬇️ Download Markdown</button>
+                <button id="btn-download-json" class="btn-sm btn-outline">⬇️ Download JSON</button>
+              </div>
+            </div>
+            <pre id="report-view-content" class="report-preview-box">Run a test to inspect the generated report.</pre>
+          </div>
+        </div>
+
+        <!-- Tab 4: History -->
+        <div id="tab-history" class="tab-pane">
+          <div class="history-container">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Scenario</th>
+                  <th>Model</th>
+                  <th>Guard Mode</th>
+                  <th>Result</th>
+                  <th>Duration</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body">
+                <tr>
+                  <td colspan="6" class="empty-table-cell">No previous runs cached in this session.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div>PromptTrap — Built for Hacktoberfest 2026 AI Agent Evaluation Challenge (Week 3 "Slow and Steady")</div>
+      <div class="footer-meta">Targeting <strong>Best Use of Gemma</strong> & <strong>Best Use of Browserbase</strong></div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
